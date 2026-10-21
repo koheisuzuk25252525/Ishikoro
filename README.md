@@ -53,11 +53,25 @@ iPhone・iPadの両方で、タイトル表示、タッチ操作、最初のス�
 ## 保存と制約
 
 - HTMLの既存のlocalStorageを、WKWebViewの永続データストアで使います。Safari版のセーブは自動では共有されません。引き継ぎコードを残してください。アプリ削除時にはデータが消える可能性があります。
-- ゲーム本体はアプリ内に同梱します。元のHTMLはGoogle Fontsを参照しています。オフライン時には端末の代替フォントになります。
+- ゲーム本体・図形・模様はHTML内に同梱し、端末の日本語フォントを使います。外部フォントや画像のダウンロードは不要です。
 - 録画・動画のダウンロード・コピー機能はOSとWKWebViewの対応状況によります。ネイティブの共有・動画保存機能は追加していません。実機で確認してください。
-- アプリアイコンやApp Store提出用設定は未設定です。公開時には別途用意してください。
+- 地層と水晶のアプリアイコンを設定済みです。App Store提出用の情報・スクリーンショット等は公開時に用意してください。アイコンの元絵は `IshikoroApp/AppIconSource.svg` です。
 - `build_editions.py` は添付された原本です。`/home/claude/web` 固定のパスを使うため、Macではそのまま実行できません。Xcodeのビルドでは使用しません。
 
 ## ブラウザ版
 
 `ishikoro.html` をブラウザで開いても遊べます。ゲームは1ファイル構成のままです。
+
+## 見た目と検証
+
+世界観は「地層と標本の冒険図鑑」。デザインの考え方と描画箇所は [VISUAL_DESIGN.md](VISUAL_DESIGN.md) にまとめています。戦闘の数値やセーブ形式は変更していません。
+
+任意の開発用ツールとしてPythonのPlaywrightを使い、画面遷移・表示範囲・既存セーブの読み込み・最初のステージのクリア・各演出を確認できます。これはゲームの実行に必要な依存関係ではありません。
+
+```sh
+python3 -m pip install playwright
+python3 -m playwright install chromium
+python3 tools/check_game_ui.py --play --animations --screenshots /tmp/ishikoro-review
+```
+
+テスト用のローカルサーバーと使い捨てのブラウザを自動で立ち上げます。実際のプレイヤーのセーブにはアクセスしません。iOSのWKWebViewでの確認は、Xcodeから別途行ってください。
