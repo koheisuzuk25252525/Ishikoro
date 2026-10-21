@@ -1,4 +1,5 @@
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>いしころ戦記</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -137,7 +138,14 @@
     padding: 16px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
     text-align: center;
   }
-  .title-screen { background: linear-gradient(var(--sky) 0 58%, var(--strata) 58% 64%, var(--ground) 64% 72%, var(--strata) 72% 78%, var(--ground) 78%); }
+  .title-screen {
+    background: linear-gradient(var(--sky) 0 58%, var(--strata) 58% 64%, var(--ground) 64% 72%, var(--strata) 72% 78%, var(--ground) 78%);
+    overflow-y: auto;
+    justify-content: flex-start;
+  }
+  .title-screen > * { flex-shrink: 0; }
+  .title-screen > :first-child { margin-top: auto; }
+  .title-screen > :last-child { margin-bottom: auto; }
   .logo {
     font-family: var(--pop); font-size: clamp(34px, 8vw, 64px); line-height: 1.1; margin: 0;
     color: var(--ink); text-wrap: balance;
@@ -556,6 +564,7 @@
   .mod-grid { width: 100%; }
   .logo-sub { font-weight: 800; font-size: 15px; margin-top: -4px; }
   @media (max-height: 460px) {
+    .title-screen { gap: 8px; }
     .title-rocks { display: none; }
     .logo { font-size: clamp(30px, 6vw, 46px); }
     .logo-sub { font-size: 13px; }

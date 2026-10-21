@@ -9,27 +9,21 @@ struct GameView: UIViewRepresentable {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
         configuration.allowsInlineMediaPlayback = true
-        // The supplied HTML has no viewport declaration. Add one without
-        // changing the shared game source or its save/edition formats.
-        configuration.userContentController.addUserScript(WKUserScript(
-            source: """
-            if (!document.querySelector('meta[name="viewport"]')) {
-                const viewport = document.createElement('meta');
-                viewport.name = 'viewport';
-                viewport.content = 'width=device-width, initial-scale=1';
-                document.head.appendChild(viewport);
-            }
-            """,
-            injectionTime: .atDocumentEnd,
-            forMainFrameOnly: true
-        ))
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
         webView.scrollView.bounces = false
         webView.isOpaque = false
         webView.backgroundColor = UIColor(red: 0.62, green: 0.80, blue: 0.95, alpha: 1)
-        if let url = Bundle.main.url(forResource: "ishikoro", withExtension: "html") {
-            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        if let url = Bundle.main.url(forResource: "ishikoro", withExtension: "html"),
+           let data = try? Data(contentsOf: url) {
+            // Declare the byte encoding to WebKit itself as well as in HTML.
+            // Keep the bundled file URL as the base for the existing save origin.
+            webView.load(
+                data,
+                mimeType: "text/html",
+                characterEncodingName: "utf-8",
+                baseURL: url
+            )
         }
         return webView
     }
