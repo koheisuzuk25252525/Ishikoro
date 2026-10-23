@@ -725,6 +725,8 @@
   #dig10Btn { background: #8a7543; border-color: #716139; color: #fff5db; box-shadow: 0 3px 0 #5a512f; }
   .gm { background: #f1ebda; border: 1px solid #c6c1a6; border-radius: 5px; }
   .gacha-result .gtag { background: #44725b; border-radius: 3px; }
+  .battle-feedback { position: absolute; top: 58px; left: 14px; right: 14px; z-index: 3; max-width: 900px; margin: auto; padding: 7px 12px; background: #173d32ef; color: #f3e5ba; border: 1px solid #d6cca355; border-radius: 5px; font-size: clamp(12px, 1.5vw, 16px); line-height: 1.6; text-align: center; pointer-events: none; }
+  .battle-review { background: #e1ead8; border-left: 3px solid #4e7c5c; padding: 10px 12px; font-size: 14px; line-height: 1.9; text-align: left; }
   /* 野外の道具箱：石を見分けることを最優先に。 */
   .field { background: #183c36; }
   .stage { border-radius: 0; }
@@ -843,6 +845,7 @@
     </div>
   </div>
 
+  <div class="battle-feedback" id="battleFeedback" role="status" aria-live="polite" hidden></div>
   <div class="bottom">
     <div class="wallet">
       <div class="coin"><i style="background: var(--magma)"></i><span><span class="num" id="magmaN">150</span><span class="word">マグマ</span></span></div>
@@ -1067,7 +1070,7 @@
   <div class="screen dim" id="resultScreen" hidden>
     <div class="card">
       <h2 id="resultTitle">クリア！</h2>
-      <p id="resultText"></p>
+      <div id="resultText"></div>
       <div class="rewards" id="resultRewards"></div>
       <div class="quiz" id="resultQuiz"></div>
       <div class="row" id="resultBtns"></div>
@@ -2492,12 +2495,14 @@
       lastSpecial: Math.max(0, ...st.specials.map(s => s[0]), st.bosses && st.bosses[0] ? st.bosses[0].at : 0), randomAt: 0, bossNext: 0,
       flash: 0, flashColor: "255,255,255", hitstop: 0,
       over: false, paused: false, cinema: false, tipQueue: [], tipTimer: 0, fossils: [], seed: 0,
+      feedbackAt: {}, feedback: null, review: { matches: {}, boxDamage: {}, unitLosses: {}, castleDamage: {}, evolutions: 0, tags: 0, danger: false },
       boxShake: 0, castleShake: 0, castleRainT: 1.4, castleHitT: 0, castleGuardT: 2, batsugun: 0
     };
     if (mod("rich")) G.magma = MAGMA_MAX;
     buildShop();
     renderModBadge();
     $("resultScreen").hidden = true;
+    $("battleFeedback").hidden = true;
     $("pauseScreen").hidden = true;
     $("tagBtn").hidden = true;
     $("tip").hidden = true;
@@ -2533,6 +2538,44 @@
       }
     }
     return f;
+  }
+
+  function battleFeedback(key, text, priority = 1) {
+    if (!G || G.over || G.clock - (G.feedbackAt[key] ?? -99) < 8) return;
+    if (G.feedback && G.feedback.until > G.clock && G.feedback.priority > priority) return;
+    G.feedbackAt[key] = G.clock;
+    G.feedback = { text, until: G.clock + 3.5, priority };
+    $("battleFeedback").innerHTML = rb(text);
+    $("battleFeedback").hidden = false;
+  }
+  function matchupTrait(k, e, good) {
+    return traitKeys(k).find(t => (e.el || []).some(el => (good ? TRAITS[t].good : TRAITS[t].bad).includes(el)));
+  }
+  function battleReview(win) {
+    const r = G.review;
+    const strongest = Object.values(r.matches).sort((a,b) => b.hits-a.hits)[0];
+    if (win) {
+      if (r.danger) return "ピンチから もちこたえた！ " + (strongest ? `${strongest.stone}の「${strongest.trait}」が ${strongest.enemy}に ${strongest.hits}かい きいたよ。` : "さいごまで なかまを だして はこを まもったね。");
+      if (strongest) return `${strongest.stone}の「${strongest.trait}」が ${strongest.enemy}に ${strongest.hits}かい きいたよ。`;
+      const contributor = Object.entries(r.castleDamage).sort((a,b) => b[1]-a[1])[0];
+      if (contributor) return `しろを いちばん けずったのは「${unitById(contributor[0]).kana}」！ ${r.evolutions ? `へんしんも ${r.evolutions}かい つかったよ。` : `はこの たいりょくは ${Math.max(0,Math.round(G.boxHP))} のこったよ。`}`;
+      return `${G.spawnN}この なかまを だしたよ。はこを まもって クリア！`;
+    }
+    const losses = Object.entries(r.unitLosses).sort((a,b) => b[1]-a[1]);
+    const actionable = losses.find(([id]) => {
+      const e = enemyById(id);
+      return e && SAVE.party.map(unitById).some(k => matchScore(k,e.el)>0 || (k.evolve && matchScore(unitById(k.evolve.to),e.el)>0));
+    });
+    const source = actionable || Object.entries(r.boxDamage).sort((a,b) => b[1]-a[1])[0];
+    const enemy = source && enemyById(source[0]);
+    if (!enemy) return "はこに てきが とどいたよ。はやめに なかまを だして まもろう。";
+    const evolved = SAVE.party.map(unitById).find(k => k.evolve && matchScore(unitById(k.evolve.to),enemy.el)>0);
+    const counter = SAVE.party.map(unitById).find(k => matchScore(k,enemy.el)>0);
+    const cause = actionable ? `${enemy.kana}に なかまが ${source[1]}こ たおれたよ。` : `${enemy.kana}が はこを いちばん けずったよ。`;
+    if (counter) return cause + ` つぎは「${counter.kana}」を だして みよう。`;
+    if (evolved) return cause + `「${evolved.kana}」を「${unitById(evolved.evolve.to).kana}」へ へんしんして みよう。`;
+    const owned = COLLECTION.find(k => owns(k.id) && matchScore(k,enemy.el)>0);
+    return cause + (owned ? ` へんせいで「${owned.kana}」を つれていこう。` : ` つぎは「${unitById(SAVE.party[0]).kana}」を はやめに だして、おたすけも つかってみよう。`);
   }
 
   // ================= 石を出す・へんしん =================
@@ -2579,6 +2622,8 @@
     if (!G || G.over || G.paused || G.cinema || G.tagCd[t.id] > 0) return;
     if (!anyOnField(t.a) || !anyOnField(t.b)) return;
     G.tagCd[t.id] = 45;
+    G.review.tags++;
+    battleFeedback("tag", "2つの {石|いし}の ちからを あわせた！", 2);
     const ua = G.units.find(u => !u.dead && t.a.includes(u.kind.id)), ub = G.units.find(u => !u.dead && t.b.includes(u.kind.id));
     if (!SAVE.tagsSeen.includes(t.id)) { SAVE.tagsSeen.push(t.id); persist(); }
     startTagCinema(t, ua.kind, ub.kind);
@@ -2657,6 +2702,8 @@
     u.dead = true;
     G.units = G.units.filter(x => x !== u);
     G.units.push(nf);
+    G.review.evolutions++;
+    battleFeedback("evolve-" + id, `${from.kana} → ${to.kana}！ とくちょうも かわるよ。`, 2);
     G.charge[id] = 0;
     G.readyAnnounced[id] = false;
     G.fx.push({ type: "sparkle", x: u.x, y: footY(nf) - to.size, t: 0, life: 1.0 });
@@ -2681,6 +2728,7 @@
       Sound.startMusic("boss");
       showBanner("ボスが きた！", k.name);
     }
+    if (!k.boss && OPENING[stageDef.id] && k.id !== "rain") battleFeedback("arrival-"+k.id, `${k.kana}が きた！ ${k.el.includes("life") ? "するどい {石|いし}の でばん。" : k.el.includes("wind") ? "かたい {石|いし}の でばん。" : "とくちょうを みよう。"}`, 0);
     tipOnce("enemy-" + k.id, k.name, k.short);
   }
 
@@ -2820,7 +2868,7 @@
       if (u.dead || u.poisonT <= 0) continue;
       u.poisonT -= dt;
       u.hp -= u.poisonDPS * dt;
-      if (u.hp <= 0) killUnit(u);
+      if (u.hp <= 0) { u.lastThreat = u.poisonSource || u.lastThreat; killUnit(u); }
     }
     G.units = G.units.filter(u => !u.dead);
     G.enemies = G.enemies.filter(e => !e.dead);
@@ -2896,7 +2944,9 @@
       if (u.atkT <= 0) {
         u.atkT = k.interval;
         const bossLeft = G.bossesAlive > 0 || G.bossNext < (stageDef.bosses || []).length;
+        const castleBefore = G.castleHP;
         G.castleHP = Math.max(bossLeft ? 1 : -9999, G.castleHP - unitAttack(u));
+        G.review.castleDamage[k.id] = (G.review.castleDamage[k.id] || 0) + Math.max(0, Math.min(castleBefore,castleBefore-G.castleHP));
         if (bossLeft && G.castleHP <= 1) tipOnce("bossguard", "ボスが しろを まもっている！", "ボスを たおすと しろを こわせるよ。");
         G.castleShake = 0.14;
         G.castleHitT = 1;
@@ -2933,9 +2983,20 @@
     let bonus = target.kind.bonus[k.id] || 1;
     if (bonus > 1 && mod("batsugun3")) bonus = 3;
     if (bonus > 1) G.batsugun++;
-    if (bonus < 1) popFx(target.x, footY(target) - target.kind.size * 2.2, "いまひとつ…", "#c9c9c9");
-    if (bonus > 1) { popFx(target.x, footY(target) - target.kind.size * 2.2, "ばつぐん！", "#ffd84a"); explainOnce(k, target.kind, true); }
-    target.hp -= unitAttack(u) * bonus;
+    const damage = unitAttack(u) * bonus;
+    if (bonus < 1) popFx(target.x, footY(target)-target.kind.size*2.2, `−${Math.round(damage)} いまひとつ`, "#c9c9c9");
+    else if (bonus > 1) {
+      popFx(target.x, footY(target)-target.kind.size*2.2, `−${Math.round(damage)} ばつぐん！`, "#e4c583");
+      const trait = matchupTrait(k,target.kind,true);
+      if (trait) {
+        const key=k.id+":"+target.kind.id;
+        const record=G.review.matches[key] || (G.review.matches[key]={stone:k.kana,enemy:target.kind.kana,trait:TRAITS[trait].name,hits:0});
+        record.hits++;
+        battleFeedback(key, `${k.kana}の「${TRAITS[trait].name}」 → ${target.kind.kana}に ${bonus}ばい！`, 1);
+      }
+      explainOnce(k,target.kind,true);
+    } else popFx(target.x,footY(target)-target.kind.size*2.2,`−${Math.round(damage)}`,"#e3e5cd");
+    target.hp -= damage;
     target.flash = 0.15;
     if (k.id === "sapphire" && !target.kind.boss) target.blueT = 2;
     if (k.special === "sticky") {
@@ -2961,6 +3022,12 @@
       if (e.atkT <= 0) {
         e.atkT = k.interval;
         G.boxHP -= e.atk;
+        G.review.boxDamage[k.id] = (G.review.boxDamage[k.id] || 0) + e.atk;
+        if (G.boxHP > 0 && G.boxHP <= G.boxMax*.35 && !G.review.danger) {
+          G.review.danger = true;
+          battleFeedback("danger", "はこが ピンチ！ てきに あう {石|いし}を だそう。", 3);
+          Sound.play("ready");
+        }
         G.boxShake = 0.2;
         e.lunge = 0.17;
         Sound.play("boxHit");
@@ -3033,7 +3100,8 @@
       dmg *= 1 - 0.5 * u.patina;
       tipOnce("patina", "{銅|どう}に {緑青|ろくしょう}が できた！", "みどりの まくが {中|なか}を まもる。10{円玉|えんだま}が みどりに なるのと おなじ。");
     }
-    if (k.special === "poison" && dmg > 0) { u.poisonT = 4; u.poisonDPS = 6 * stageDef.mult; }
+    if (k.special === "poison" && dmg > 0) { u.poisonT = 4; u.poisonDPS = 6 * stageDef.mult; u.poisonSource = k.id; }
+    if (dmg > 0) u.lastThreat = k.id;
     u.hp -= dmg;
     if (dmg > 0) u.flash = 0.15;
     if (u.hp <= 0) killUnit(u);
@@ -3042,6 +3110,7 @@
   function killUnit(u) {
     if (u.dead) return;
     const k = u.kind;
+    if (u.lastThreat) G.review.unitLosses[u.lastThreat] = (G.review.unitLosses[u.lastThreat] || 0) + 1;
     u.dead = true;
     G.dying.push({ f: u, t: 0 });
     Sound.play("unitDown");
@@ -3131,6 +3200,7 @@
     $("resultText").innerHTML = rb((win
       ? (G.fossils.length ? "{見|み}つけた {化石|かせき}：" + G.fossils.join("、") : "")
       : "{石|いし}の はこが やられて しまった。") + (win ? "" : hk(helpOf(stageDef) < 3 ? "こまったら おたすけを つかうんじゃ。てきが よわく なって、マグマも ふえるぞ。おすすめの {石|いし}も 見てみよう。" : stageDef.point.d, "small")));
+    $("resultText").insertAdjacentHTML("afterbegin", `<p class="battle-review">${rb(battleReview(win))}</p>`);
     $("resultRewards").innerHTML = rewards.join("");
     quiz = win ? makeQuiz() : null;
     renderQuiz();
@@ -4109,6 +4179,7 @@
   }
 
   function drawFx(dt) {
+    if (G.fx.length > 64) G.fx = G.fx.slice(-64);
     for (const fx of G.fx) {
       fx.t += dt;
       const p = Math.min(1, fx.t / fx.life);
@@ -4479,6 +4550,7 @@
 
   function renderHUD() {
     if (!G) return;
+    $("battleFeedback").hidden = G.over || !G.feedback || G.clock >= G.feedback.until;
     const tg = !G.over && !G.cinema ? readyTag() : null;
     if ((tg && tg.id) !== G.tagShown) {
       G.tagShown = tg && tg.id;
@@ -4565,6 +4637,7 @@
     ["dataScreen", "homeScreen", "modScreen"].forEach(id => { $(id).hidden = true; });
     if (name !== "battle" && REC) recStop();
     if (name !== "battle") {
+      $("battleFeedback").hidden = true;
       ["resultScreen", "pauseScreen", "howtoScreen", "cinema"].forEach(id => { $(id).hidden = true; });
       $("tip").hidden = true;
       $("banner").hidden = true;
