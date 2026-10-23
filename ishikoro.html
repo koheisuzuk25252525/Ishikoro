@@ -823,16 +823,59 @@
     *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   }
 
+  .bottom .tag-btn { position: relative; top: auto; left: auto; right: auto; flex: 0 0 118px; width: 118px; min-height: 52px; padding: 6px 8px; border: 2px dashed #b29d5f; border-radius: 6px; background: #295b47; color: #fff5d6; font-size: 11px; line-height: 1.5; }
+  .bottom .tag-btn b { display: block; font-size: 12px; }
+  @media (min-height: 600px) and (min-width: 700px) { .stage .rec-btn { right: 166px; height: 56px; } }
+  /* 戦闘の優先順位：HP → 出撃/変身 → 資源。色と文字の両方で示す。 */
+  .battle-status { position: absolute; top: 8px; left: 12px; z-index: 3; display: flex; gap: 8px; font-size: 12px; color: #f8f2dc; pointer-events: none; }
+  .battle-status > span { display: grid; grid-template-columns: auto auto; gap: 2px 10px; min-width: 98px; padding: 5px 8px; background: #173c32e8; border: 1px solid #b4c09a66; border-radius: 5px; }
+  .battle-status b { text-align: right; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .hp-track { grid-column: 1/-1; height: 4px; background: #c8d0ad33; }
+  .hp-track i { display: block; height: 100%; background: #a3c5a0; }
+  .battle-status > span:last-child .hp-track i { background: #d7ab78; }
+  .battle-status.danger > span:first-child { border-width: 2px; border-style: dashed; }
+  .battle-status.danger > span:first-child::before { content: "！ピンチ"; grid-column: 1/-1; font-size: 11px; }
+  .app.has-feedback .tip, .app.has-feedback .banner { visibility: hidden; }
+  .banner { top: 58px; }
+  .pause-btn { width: 44px; height: 44px; }
+  .speed-btn { min-width: 60px; height: 44px; right: 60px; }
+  .rec-btn { height: 44px; right: 128px; }
+  .bottom { gap: 10px; }
+  .wallet { width: 100px; }
+  .coin .word { font-size: 10px; }
+  .rock-btn { flex-basis: 100px; height: 98px; padding: 4px 3px; gap: 2px; }
+  .rock-btn canvas { width: 60px; height: 38px; }
+  .rock-btn .name { font-size: 12px; font-weight: 800; line-height: 1.25; }
+  .rock-btn .price { font-size: 11px; line-height: 1.25; }
+  .rock-action { position: relative; font-size: 12px; line-height: 1.2; font-weight: 800; color: #315d48; }
+  .rock-trait { font-size: 9px; top: 3px; }
+  .rock-btn.evolve { border: 2px dashed #77739a; }
+  .rock-btn.evolve .rock-action { color: #635582; }
+  #pauseScreen { z-index: 50; }
+  #pauseScreen .big-btn, #rotate .pill { min-height: 44px; }
+  @media (min-height: 600px) and (min-width: 700px) {
+    .rock-btn { flex-basis: 124px; height: 138px; }
+    .rock-btn canvas { width: 84px; height: 68px; }
+    .rock-btn .name { font-size: 14px; }
+    .rock-btn .price, .rock-action { font-size: 13px; }
+    .rock-trait { font-size: 10px; }
+    .wallet { width: 116px; }
+    .battle-status { font-size: 14px; }
+    .battle-status > span { min-width: 130px; }
+    .battle-status b { font-size: 18px; }
+    .pause-btn { width: 56px; height: 56px; }
+    .speed-btn { height: 56px; right: 74px; }
+  }
+  @media (orientation: portrait) { body.in-battle .rotate { display: flex; } }
 </style>
 
-<div class="rotate" id="rotate"><div class="ph">📱</div><p>よこむきに すると<br>ひろく あそべるよ</p><button class="pill" type="button" id="rotateOk">このまま あそぶ</button></div>
+<div class="rotate" id="rotate"><div class="ph">📱</div><p>たたかいは よこむきで<br>ずかんは たてでも みられるよ</p><button class="pill" type="button" id="rotateOk">ずかんを みる</button></div>
 <div class="app" id="app">
   <div class="field" id="field">
     <div class="stage" id="stage">
       <canvas id="cv" width="1400" height="560" aria-label="バトル画面"></canvas>
       <button class="pause-btn" id="pauseBtn" type="button" aria-label="いちじていし"></button>
       <button class="speed-btn" id="speedBtn" type="button" aria-label="はやさを かえる">×1</button>
-      <button class="tag-btn" id="tagBtn" type="button" hidden></button>
       <div class="mod-badge" id="modBadge" hidden></div>
       <button class="rec-btn" id="recBtn" type="button" aria-label="ショートどうがを とる">🎬</button>
       <button class="tip" id="tip" type="button" hidden aria-live="polite"></button>
@@ -845,12 +888,17 @@
     </div>
   </div>
 
+  <div class="battle-status" id="battleStatus" aria-label="はことしろのたいりょく" hidden>
+    <span>はこ <b id="boxHealth"></b><span class="hp-track"><i id="boxHealthBar"></i></span></span>
+    <span>しろ <b id="castleHealth"></b><span class="hp-track"><i id="castleHealthBar"></i></span></span>
+  </div>
   <div class="battle-feedback" id="battleFeedback" role="status" aria-live="polite" hidden></div>
   <div class="bottom">
     <div class="wallet">
       <div class="coin"><i style="background: var(--magma)"></i><span><span class="num" id="magmaN">150</span><span class="word">マグマ</span></span></div>
-      <div class="coin"><i style="background: var(--sed); border-radius: 3px"></i><span><span class="num" id="sedN">6</span><span class="word">たいせきぶつ</span></span></div>
+      <div class="coin"><i style="background: var(--sed); border-radius: 3px"></i><span><span class="num" id="sedN">6</span><span class="word">すな・どろ</span></span></div>
     </div>
+    <button class="tag-btn" id="tagBtn" type="button" hidden></button>
     <div class="shop" id="shop"></div>
   </div>
 
@@ -970,7 +1018,7 @@
       <div class="steps">
         <div class="step"><span class="step-num">1</span><div class="mini"><span></span></div><p>ボタンを おすと<br><ruby>石<rt>いし</rt></ruby>が <ruby>出<rt>で</rt></ruby>る</p></div>
         <div class="step"><span class="step-num">2</span><div class="mini"><span class="g"></span></div><p>みどりに <ruby>光<rt>ひか</rt></ruby>る <ruby>石<rt>いし</rt></ruby>は<br>いまの <ruby>敵<rt>てき</rt></ruby>に <ruby>強<rt>つよ</rt></ruby>い</p></div>
-        <div class="step"><span class="step-num">3</span><div class="mini"><span class="p"></span></div><p>むらさきに <ruby>光<rt>ひか</rt></ruby>ったら<br>おして へんしん！</p></div>
+        <div class="step"><span class="step-num">3</span><div class="mini"><span class="p"></span></div><p>「へんしん！」と でたら<br>おなじ ボタンを おそう</p></div>
         <div class="step"><span class="step-num">4</span><div class="mini"><span class="c"></span></div><p>みぎの <ruby>雲<rt>くも</rt></ruby>の <ruby>城<rt>しろ</rt></ruby>を<br>こわせば かち</p></div>
       </div>
       <button class="big-btn" id="startBtn" type="button">はじめる</button>
@@ -997,7 +1045,7 @@
     <div class="intro-text" id="introText"></div>
     <div class="intro-btns"><button class="pill" id="introSkip" type="button">スキップ</button><button class="big-btn" id="introNext" type="button">つぎへ ▶</button></div>
   </div>
-  <div class="getscr" id="getScreen" hidden>
+  <div class="getscr" id="getScreen" role="dialog" aria-modal="true" aria-label="あたらしい なかま" hidden>
     <canvas id="getCv"></canvas>
     <div class="get-card"><div id="getBody"></div><button class="big-btn" id="getBtn" type="button">なかまに した！</button></div>
   </div>
@@ -2001,9 +2049,8 @@
     }
     return s;
   }
-  const SAVE = (() => {
-    let s = store("ishikoroSave2", null);
-    if (!s) s = freshSave();
+  function normalizeSave(data) {
+    const s = Object.assign(freshSave(), data);
     if (s.introSeen === undefined) s.introSeen = s.cleared.length > 0 || s.got.length > 2;
     if (!s.tagsSeen) s.tagsSeen = [];
     if (!s.stars) s.stars = {};
@@ -2016,7 +2063,8 @@
     if (!s.evoSeen) s.evoSeen = s.got.filter(id => { const k = unitById(id); return k && k.rarity === 0; });
     if (!s.v6) { s.v6 = true; if (s.cleared.length) { s.tickets += 10; s.bonusMsg = true; } }
     return adaptOpeningSave(s);
-  })();
+  }
+  const SAVE = normalizeSave(store("ishikoroSave2", null) || freshSave());
   const persist = () => save("ishikoroSave2", SAVE);
   // レア度が 高いほど こうげきが 強い（へんしんした石は ★★、ほうせきは ★★★ あつかい）
   const TIER_ATK = { 1: 1, 2: 1.15, 3: 1.35 };
@@ -2092,7 +2140,8 @@
       return recDest.stream;
     }
     function init() {
-      if (ac) { if (ac.state === "suspended") ac.resume(); return; }
+      if (document.hidden) return;
+      if (ac) { if (ac.state !== "running" && ac.state !== "closed") ac.resume().catch(() => {}); return; }
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
       try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) { /* 古いブラウザ */ }
@@ -2369,14 +2418,16 @@
       }
     }
     function startMusic(name) {
-      if (!ac) return;
+      if (!ac || document.hidden) return;
+      musicBus.gain.value = prefs.music ? .6 : 0;
       if (name === "field") name = fieldName;
       const s = SONGS[name] || SONGS.field0;
       if (cur !== s) { cur = s; stepI = 0; partI = 0; }
       if (!timer) { nextT = ac.currentTime + 0.08; timer = setInterval(tick, 25); }
     }
     function setField(name) { fieldName = SONGS[name] ? name : "field0"; }
-    function stopMusic() { if (timer) clearInterval(timer); timer = null; }
+    function stopMusic() { if (timer) clearInterval(timer); timer = null; if (musicBus) musicBus.gain.value = 0; }
+    function suspend() { stopMusic(); if (ac && ac.state === "running") ac.suspend().catch(() => {}); }
     function setPref(key, on) {
       prefs[key] = on;
       save("ishikoroSound", prefs);
@@ -2384,7 +2435,7 @@
       if (key === "music") musicBus.gain.value = on ? 0.6 : 0;
       else sfxBus.gain.value = on ? 1 : 0;
     }
-    return { init, play, startMusic, stopMusic, setPref, setField, recStream, prefs };
+    return { init, play, startMusic, stopMusic, suspend, setPref, setField, recStream, prefs };
   })();
 
   // ================= 画面の大きさ =================
@@ -2440,7 +2491,10 @@
     const bw = Math.max(1, Math.floor(cssW * dpr));
     if (cv.width !== bw) { cv.width = bw; cv.height = Math.max(1, Math.floor(cssH * dpr)); }
   }
-  window.addEventListener("resize", fitCanvas);
+  window.addEventListener("resize", () => {
+    fitCanvas();
+    if (G && !G.over && currentScreen === "battle" && window.innerHeight > window.innerWidth) setPaused(true);
+  });
 
   function shade(hex, f) {
     const n = parseInt(hex.slice(1), 16);
@@ -2791,7 +2845,7 @@
       if (G.charge[id] >= k.evolve.time && !G.readyAnnounced[id]) {
         G.readyAnnounced[id] = true;
         Sound.play("ready");
-        tip(`${k.name}が へんしんできる！`, "むらさきに ひかる ボタンを おそう。", true);
+        tip(`${k.name}が へんしんできる！`, "「へんしん！」と でた おなじ ボタンを おそう。", true);
       }
     }
   }
@@ -2834,7 +2888,7 @@
         G.fx.push({ type: "castleRain", t: 0, life: 0.6 });
         Sound.play("rain");
         near.forEach(u => damageUnit(u, CASTLE_RAIN, CASTLE_RAIN.atk * stageDef.mult));
-        tipOnce("castleRain", "{雲|くも}の {城|しろ}の おおあめ！", "ちかづくと はげしい {雨|あめ}が ふる。いっきに たくさん {出|だ}して こわそう。");
+        tipOnce("castleRain", "{雲|くも}の {城|しろ}の おおあめ！", "ちかづくと はげしい {雨|あめ}が ふる。なかまの たいりょくを みて、つぎの {石|いし}を えらぼう。");
       }
     }
     if (G.castleHitT > 0) {
@@ -4524,6 +4578,17 @@
 
   // ================= 下のボタン =================
   let shopButtons = {};
+  function battleRole(k) {
+    const traits = traitKeys(k);
+    if (traits.includes("sharp")) return "するどい";
+    if (k.special === "wall") return "まもる";
+    if (k.special === "split") return "わかれる";
+    if (k.speed >= 100) return "はやい";
+    if (traits.includes("heavy")) return "おもい";
+    if (k.beam || k.special === "beam") return "とおく";
+    if (k.evolve) return "へんしん";
+    return specimenTrait(k).split("の")[0].slice(0,4);
+  }
   function buildShop() {
     const shop = $("shop");
     shop.innerHTML = "";
@@ -4539,11 +4604,11 @@
       const res = k.cost.magma ? "magma" : "sed";
       const color = res === "magma" ? "var(--magma)" : "var(--sed)";
       b.innerHTML = `<span class="fill cool"></span><span class="fill charge"></span><span class="ricon">${ORIGINS[originOf(k)].icon}</span>` +
-        `<canvas class="thumb" data-type="unit" data-id="${k.id}" width="36" height="28"></canvas><span class="name">${k.kana}</span><span class="rock-trait">${specimenTrait(k).split("の")[0].slice(0, 4)}</span>` +
-        `<span class="price" style="background:${color}">${k.cost[res]}</span>`;
+        `<canvas class="thumb" data-type="unit" data-id="${k.id}" width="36" height="28"></canvas><span class="name">${k.kana}</span><span class="rock-trait">${battleRole(k)}</span>` +
+        `<span class="rock-action">だす</span><span class="price" style="background:${color}">${res === "magma" ? "マグマ" : "すな"} ${k.cost[res]}</span>`;
       b.addEventListener("click", () => press(k.id));
       shop.appendChild(b);
-      shopButtons[k.id] = { b, cool: b.querySelector(".cool"), charge: b.querySelector(".charge"), name: b.querySelector(".name"), price: b.querySelector(".price") };
+      shopButtons[k.id] = { b, cool: b.querySelector(".cool"), charge: b.querySelector(".charge"), name: b.querySelector(".name"), action: b.querySelector(".rock-action"), price: b.querySelector(".price") };
     }
     paintThumbs(shop);
   }
@@ -4551,6 +4616,13 @@
   function renderHUD() {
     if (!G) return;
     $("battleFeedback").hidden = G.over || !G.feedback || G.clock >= G.feedback.until;
+    document.querySelector(".app").classList.toggle("has-feedback", !$("battleFeedback").hidden);
+    $("battleStatus").hidden = currentScreen !== "battle" || G.over;
+    $("battleStatus").classList.toggle("danger", G.boxHP <= G.boxMax * .35);
+    $("boxHealth").textContent = Math.max(0,Math.ceil(G.boxHP));
+    $("castleHealth").textContent = Math.max(0,Math.ceil(G.castleHP));
+    $("boxHealthBar").style.width = Math.max(0,G.boxHP/G.boxMax)*100+"%";
+    $("castleHealthBar").style.width = Math.max(0,G.castleHP/G.castleMax)*100+"%";
     const tg = !G.over && !G.cinema ? readyTag() : null;
     if ((tg && tg.id) !== G.tagShown) {
       G.tagShown = tg && tg.id;
@@ -4578,12 +4650,17 @@
       let chargeFrac = 0;
       chainOf(id).forEach(c => { const ck = unitById(c); if (ck.evolve) chargeFrac = Math.max(chargeFrac, (G.charge[c] || 0) / ck.evolve.time); });
       s.charge.style.height = Math.min(1, chargeFrac) * 100 + "%";
-      s.name.textContent = evoId ? "へんしん！" : k.kana;
+      s.name.textContent = k.kana;
+      const missing = Math.max(0, ...Object.entries(k.cost).map(([res,n]) => Math.ceil(n-G[res])));
+      s.action.textContent = evoId ? "へんしん！" : G.paused || G.cinema ? "まってね" : cd > 0 ? `${Math.ceil(cd)}びょう` : missing ? `あと ${missing}` : good.has(id) ? "◎ だす" : "だす";
       s.price.hidden = !!evoId;
+      const label = evoId ? `${k.kana}：${unitById(unitById(evoId).evolve.to).kana}に へんしん` : `${k.kana}を だす。${s.price.textContent}。${s.action.textContent}`;
+      if (s.b.getAttribute("aria-label") !== label) s.b.setAttribute("aria-label", label);
     }
   }
 
   // ================= ループ =================
+  let appSuspended = document.hidden, nativeInactive = false, bookCinema = false;
   let last = null, hudTimer = 0, gachaAnim = null;
   const SPEEDS = [1, 2, 3, 5];
   let speed = SPEEDS.includes(store("ishikoroSpeed", 1)) ? store("ishikoroSpeed", 1) : 1;
@@ -4600,6 +4677,7 @@
     updateSpeedBtn();
   });
   function frame(now) {
+    if (appSuspended) { last = now; requestAnimationFrame(frame); return; }
     if (last === null) last = now;
     let dt = (now - last) / 1000;
     last = now;
@@ -4613,7 +4691,7 @@
         hudTimer -= dt;
         if (hudTimer <= 0) { hudTimer = 0.1; renderHUD(); }
       }
-      if (G.cinema) cineStep(dt);
+      if (G.cinema && !G.paused) cineStep(dt);
       draw(running ? dt * speed : 0);
       if (REC) recFrame();
     }
@@ -4631,6 +4709,7 @@
   const SCREENS = { title: "titleScreen", map: "mapScreen", party: "partyScreen", gacha: "gachaScreen", zukan: "zukanScreen", status: "statusScreen", kantei: "kanteiScreen" };
   function show(name) {
     currentScreen = name;
+    document.body.classList.toggle("in-battle", name === "battle");
     Object.entries(SCREENS).forEach(([k, id]) => { $(id).hidden = k !== name; });
     $("zDetail").hidden = true;
     $("prepScreen").hidden = true;
@@ -4638,6 +4717,8 @@
     if (name !== "battle" && REC) recStop();
     if (name !== "battle") {
       $("battleFeedback").hidden = true;
+      $("battleStatus").hidden = true;
+      document.querySelector(".app").classList.remove("has-feedback");
       ["resultScreen", "pauseScreen", "howtoScreen", "cinema"].forEach(id => { $(id).hidden = true; });
       $("tip").hidden = true;
       $("banner").hidden = true;
@@ -4655,6 +4736,7 @@
     if (name === "gacha") resetGacha();
     if (name === "zukan") { renderZukan(); $("zukanScreen").scrollTop = 0; }
     if (name === "title") paintThumbs($("titleScreen"));
+    if (name === "battle" && G && G.paused && !G.over) $("pauseScreen").hidden = false;
   }
 
   function startStage(st, quickStart = false) {
@@ -4668,13 +4750,15 @@
     }
     if (!quickStart && !store("ishikoroHowto3", false)) $("howtoScreen").hidden = false;
     else Sound.startMusic("field");
+    if (window.innerHeight > window.innerWidth) setPaused(true);
   }
 
   function setPaused(p) {
-    if (!G || G.over || G.cinema) return;
+    if (!G || G.over) return;
+    if (!p && (appSuspended || window.innerHeight > window.innerWidth)) return;
     G.paused = p;
     $("pauseScreen").hidden = !p;
-    if (p) Sound.stopMusic(); else Sound.startMusic(G.bossesAlive ? "boss" : "field");
+    if (p || G.cinema) Sound.stopMusic(); else Sound.startMusic(G.bossesAlive ? "boss" : "field");
     renderHUD();
   }
 
@@ -5027,7 +5111,7 @@
       if (a.shown && a.multi && !a.uiDone && a.t >= a.end) {
         a.uiDone = true; updateGachaUI();
         const news = a.multi.filter(r => r.res.isNew).map(r => r.kind.id);
-        if (news.length) setTimeout(() => showGet(news), 600);
+        if (news.length) setTimeout(() => { if (currentScreen === "gacha" && gachaAnim === a) showGet(news); }, 600);
       }
       if (!a.shown && a.t >= 2.3) {
         a.shown = true;
@@ -5037,7 +5121,7 @@
         $("gachaTag").textContent = a.res.isNew ? "NEW! なかまに なった" : pl ? `げんかいとっぱ +${pl}！ こうげき ${s0.atk}→${s1.atk}` : `Lv${a.res.lv}に アップ！ こうげき ${s0.atk}→${s1.atk}`;
         $("gachaTag").classList.toggle("lvup", !a.res.isNew);
         $("gachaResult").hidden = false;
-        if (a.res.isNew) setTimeout(() => showGet([a.kind.id]), 900);
+        if (a.res.isNew) setTimeout(() => { if (currentScreen === "gacha" && gachaAnim === a) showGet([a.kind.id]); }, 900);
         updateGachaUI();
       }
       a.debris.forEach(d => { d.t += dt; d.vy += 700 * dt; d.x += d.vx * dt; d.y += d.vy * dt; });
@@ -5268,10 +5352,10 @@
       const t = code.trim();
       if (!t.startsWith("ISHI1.")) return false;
       const d = JSON.parse(decodeURIComponent(escape(atob(t.slice(6)))));
-      if (!d || typeof d.owned !== "object" || !Array.isArray(d.cleared) || !Array.isArray(d.party)) return false;
+      if (!d || !d.owned || typeof d.owned !== "object" || Array.isArray(d.owned) || !Array.isArray(d.cleared) || !Array.isArray(d.party)) return false;
+      const restored = normalizeSave(d);
       Object.keys(SAVE).forEach(key => delete SAVE[key]);
-      Object.assign(SAVE, freshSave(), d);
-      adaptOpeningSave(SAVE);
+      Object.assign(SAVE, restored);
       persist();
       return true;
     } catch (e) { return false; }
@@ -5419,7 +5503,12 @@
   }
   setStream(!!store("ishikoroStream", false));
   $("streamBtn").addEventListener("click", () => { Sound.init(); Sound.play("tap"); setStream(!STREAM); });
-  $("rotateOk").addEventListener("click", () => document.body.classList.add("portrait-ok"));
+  $("rotateOk").addEventListener("click", () => {
+    document.body.classList.add("portrait-ok");
+    zBack = currentScreen === "battle" ? "battle" : "title";
+    bookCinema = currentScreen === "battle" && !!G && G.cinema;
+    show("zukan");
+  });
   $("dataBtn").addEventListener("click", () => { Sound.init(); Sound.play("tap"); openData(); });
   $("dataClose").addEventListener("click", () => { Sound.play("tap"); $("dataScreen").hidden = true; });
   $("dataCopy").addEventListener("click", async () => {
@@ -5875,7 +5964,10 @@
     startIntro();
   });
   $("titleZukanBtn").addEventListener("click", () => { Sound.init(); Sound.play("tap"); zBack = "title"; show("zukan"); });
-  $("zukanBack").addEventListener("click", () => { Sound.play("tap"); show(zBack); });
+  $("zukanBack").addEventListener("click", () => {
+    Sound.play("tap"); show(zBack);
+    if (zBack === "battle" && bookCinema && cine) { G.cinema = true; $("cinema").hidden = false; bookCinema = false; setPaused(true); }
+  });
   $("startBtn").addEventListener("click", () => { Sound.init(); Sound.play("tap"); save("ishikoroHowto3", true); $("howtoScreen").hidden = true; Sound.startMusic("field"); });
   $("pauseBtn").addEventListener("click", () => { Sound.play("tap"); setPaused(true); });
   $("resumeBtn").addEventListener("click", () => { Sound.init(); Sound.play("tap"); setPaused(false); });
@@ -5885,7 +5977,7 @@
   $("tip").addEventListener("click", () => { if (G) showNextTip(); });
   $("resultBtns").addEventListener("click", e => {
     const b = e.target.closest("[data-result]");
-    if (!b) return;
+    if (!b || !$("getScreen").hidden) return;
     Sound.play("tap");
     const act = b.dataset.result;
     if (act === "map") show("map");
@@ -5902,12 +5994,21 @@
       show("map"); openPrep(stageDef);
     }
   });
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-      Sound.stopMusic();
-      if (G && !G.over && !G.cinema && currentScreen === "battle") setPaused(true);
-    }
-  });
+  function suspendAdventure() {
+    appSuspended = true;
+    if (G && !G.over && currentScreen === "battle") setPaused(true);
+    Sound.suspend();
+  }
+  function restoreAdventure() {
+    appSuspended = document.hidden || nativeInactive;
+    last = null; fitCanvas();
+    // Returning never resumes combat or audio without the player's gesture.
+  }
+  document.addEventListener("visibilitychange", () => { if (document.hidden) suspendAdventure(); else restoreAdventure(); });
+  window.addEventListener("pagehide", suspendAdventure);
+  window.addEventListener("pageshow", restoreAdventure);
+  window.addEventListener("ishikoro:background", () => { nativeInactive = true; suspendAdventure(); });
+  window.addEventListener("ishikoro:active", () => { nativeInactive = false; restoreAdventure(); });
   document.addEventListener("touchend", () => Sound.init(), { passive: true });
 
   // ================= ずかん =================
