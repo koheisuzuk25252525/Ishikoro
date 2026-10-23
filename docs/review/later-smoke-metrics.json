@@ -1,0 +1,28 @@
+[
+  {
+    "stage": 4,
+    "policy": [
+      "basalt",
+      "obsidian",
+      "sandstone",
+      "shale"
+    ],
+    "result": "クリア！",
+    "seconds": 91.65400000000382,
+    "hp": 1500,
+    "matches": 49,
+    "errors": []
+  },
+  {
+    "stage": 5,
+    "policy": [
+      "sandstone",
+      "quartz"
+    ],
+    "result": "クリア！",
+    "seconds": 86.17600000000205,
+    "hp": 1500,
+    "matches": 39,
+    "errors": []
+  }
+]

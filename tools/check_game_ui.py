@@ -2,7 +2,7 @@
 """Browser regression checks; uses only disposable browser saves, never user data.
 
 Install optional test tools: pip install playwright; playwright install chromium.
-Run: python3 tools/check_game_ui.py --play --screenshots /tmp/ishikoro-review
+Run: python3 tools/check_game_ui.py --play --animations --screenshots /tmp/ishikoro-review
 """
 from pathlib import Path
 import argparse
@@ -10,6 +10,8 @@ import functools
 import http.server
 import shutil
 import threading
+import subprocess
+import sys
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--play', action='store_true', help='Also clear the first stage through game controls')
@@ -83,36 +85,9 @@ try:
  
 
  if args.play:
-  with sync_playwright() as p:
-   b=p.chromium.launch(executable_path=browser_path,headless=True,args=['--no-sandbox'])
-   page=b.new_page(viewport={'width':844,'height':340},is_mobile=True,has_touch=True)
-   errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-   page.route('https://fonts.googleapis.com/**',lambda route:route.abort())
-   page.route('https://fonts.gstatic.com/**',lambda route:route.abort())
-   page.clock.install()
-   page.goto(base_url)
-   page.locator('#playBtn').click()
-   if page.locator('#introScreen').is_visible(): page.locator('#introSkip').click()
-   if page.locator('#mapScreen').is_visible(): page.locator('.stage-card:not([disabled])').first.click()
-   if page.locator('#prepScreen').is_visible(): page.locator('#prepGo').click()
-   if page.locator('#howtoScreen').is_visible(): page.locator('#startBtn').click()
-   for i in range(180):
-    if page.locator('#cineBtn').is_visible(): page.locator('#cineBtn').click()
-    page.evaluate('''() => {
-     for (const b of document.querySelectorAll('.rock-btn:not(:disabled)')) b.click();
-    }''')
-    page.clock.run_for(1000)
-    if page.locator('#resultScreen').is_visible():
-     result=page.locator('#resultTitle').inner_text();print('Stage result:',result,'after',i+1,'virtual seconds',flush=True)
-     capture(page,'stage-result.png')
-     assert 'クリア' in result,result
-     break
-   else: raise AssertionError('Stage did not finish in 180 virtual seconds')
-   assert not errors,errors
-   save=page.evaluate('localStorage.getItem("ishikoroSave2")');assert save
-   page.reload();assert page.evaluate('localStorage.getItem("ishikoroSave2")')==save
-   print('PASS: first-stage clear through game controls, save persists across reload, no JavaScript errors',flush=True)
-   b.close()
+  command = [sys.executable, str(root / "tools/check_opening_gameplay.py")]
+  if args.screenshots: command += ["--screenshots", str(args.screenshots)]
+  subprocess.run(command, check=True)
 
  if args.animations:
   with sync_playwright() as p:
