@@ -91,8 +91,11 @@ try:
    page.route('https://fonts.gstatic.com/**',lambda route:route.abort())
    page.clock.install()
    page.goto(base_url)
-   page.locator('#playBtn').click();page.locator('#introSkip').click()
-   page.locator('.stage-card:not([disabled])').first.click();page.locator('#prepGo').click();page.locator('#startBtn').click()
+   page.locator('#playBtn').click()
+   if page.locator('#introScreen').is_visible(): page.locator('#introSkip').click()
+   if page.locator('#mapScreen').is_visible(): page.locator('.stage-card:not([disabled])').first.click()
+   if page.locator('#prepScreen').is_visible(): page.locator('#prepGo').click()
+   if page.locator('#howtoScreen').is_visible(): page.locator('#startBtn').click()
    for i in range(180):
     if page.locator('#cineBtn').is_visible(): page.locator('#cineBtn').click()
     page.evaluate('''() => {
@@ -117,7 +120,7 @@ try:
    for w,h in [(844,340),(1180,780)]:
     page=b.new_page(viewport={'width':w,'height':h},is_mobile=True,has_touch=True)
     errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.clock.install()
-    page.goto(base_url);page.locator('#playBtn').click()
+    page.goto(base_url);page.locator('#storyBtn').click()
     for _ in range(9):
      if page.locator('#getScreen').is_visible():break
      page.locator('#introNext').click()

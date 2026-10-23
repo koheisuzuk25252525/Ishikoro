@@ -1842,6 +1842,23 @@
   }
 
 
+  // はじめの3戦だけを、一つずつ判断を学べる小さな旅にする。
+  // 石の能力値、4戦目以降の難易度・報酬・解放条件は変えない。
+  const OPENING = {
+    1: { castle: 1100, rainEvery: 9, firstRain: 4, specials: [], pool: ["rain"], reward: "obsidian",
+      point: { t: "はやさと じょうぶさ", d: "かるいしは はやい。さがんは すこし じょうぶ。2つの ボタンで なかまを だそう。" } },
+    2: { name: "ねっこの {森|もり}", castle: 1800, rainEvery: 14, firstRain: 4,
+      specials: [[10, "lichen"], [22, "lichen"], [34, "root"], [52, "lichen"]], pool: ["rain", "lichen"],
+      point: { t: "するどい {石|いし}で きる", d: "ねっこや ちいるいには、するどい こくようせき。マグマを のこして まとう。" } },
+    16: { castle: 2200, rainEvery: 14, firstRain: 4,
+      specials: [[14, "sandstorm"], [28, "sandstorm"], [42, "sandstorm"], [56, "sandstorm"]], pool: ["rain", "sandstorm"],
+      point: { t: "すなあらしには へんしん", d: "すなあらしは やわらかい {石|いし}を けずる。さがんを けいがんに へんしんさせよう。" } }
+  };
+  STAGES.forEach(st => {
+    const lesson = OPENING[st.id];
+    if (lesson) { Object.assign(st, lesson); st.intro = lesson.point.d; }
+  });
+
   const THEMES = {
     meadow: { sky: "#9eccf2", far: "#8ca8c2", ground: "#9e7a54", strata: ["#b38f66", "#8f6e4d", "#a8855c"], grass: "#73b359", sun: "#ffe066" },
     forest: { sky: "#b4dcd8", far: "#6f9a7a", ground: "#8a6a48", strata: ["#9e7a54", "#7a5c3e", "#94704b"], grass: "#4f9a44", trees: true, sun: "#fff1a8" },
@@ -1973,6 +1990,14 @@
   // ================= セーブ =================
   const freshSave = () => ({ owned: {}, got: [], cleared: [], tickets: 0, party: ["sandstone"], seen: [], fossils: {}, tagsSeen: [], plus: {},
     gachaMode: "all", evoSeen: [], v6: true, introSeen: false, help: {}, towerBest: 0, endingSeen: false });
+  function adaptOpeningSave(s) {
+    if (s.cleared.includes(1) && !s.owned.obsidian) {
+      s.owned.obsidian = 1;
+      if (!s.got.includes("obsidian")) s.got.push("obsidian");
+      if (s.party.length < 6 && !s.party.includes("obsidian")) s.party.push("obsidian");
+    }
+    return s;
+  }
   const SAVE = (() => {
     let s = store("ishikoroSave2", null);
     if (!s) s = freshSave();
@@ -1987,7 +2012,7 @@
     if (!s.towerBest) s.towerBest = 0;
     if (!s.evoSeen) s.evoSeen = s.got.filter(id => { const k = unitById(id); return k && k.rarity === 0; });
     if (!s.v6) { s.v6 = true; if (s.cleared.length) { s.tickets += 10; s.bonusMsg = true; } }
-    return s;
+    return adaptOpeningSave(s);
   })();
   const persist = () => save("ishikoroSave2", SAVE);
   // レア度が 高いほど こうげきが 強い（へんしんした石は ★★、ほうせきは ★★★ あつかい）
@@ -2440,7 +2465,7 @@
 
   function buildScript(st) {
     const script = [];
-    for (let t = 6; t < 400; t += st.rainEvery) script.push([t, "rain"]);
+    for (let t = st.firstRain || 6; t < 400; t += st.rainEvery) script.push([t, "rain"]);
     st.specials.forEach(s => script.push(s));
     return script.sort((a, b) => a[0] - b[0]);
   }
@@ -3063,6 +3088,7 @@
     Sound.play(win ? "win" : "lose");
     $("tip").hidden = true;
     const rewards = [];
+    let newCompanion = null;
     const T = !!stageDef.tower, isFinal = !T && stageDef === STAGES[STAGES.length - 1];
     if (win) { delete SAVE.help[helpKey(stageDef)]; }
     if (win && T) {
@@ -3093,7 +3119,7 @@
       if (first && STAGES.indexOf(stageDef) === GACHA_AT - 1) rewards.push(`<div class="reward"><span class="tag">NEW</span>${rb("いしほり（ガチャ）が できるように なった！")}</div>`);
       if (first) {
         const r = giveStone(stageDef.reward);
-        if (r.isNew) setTimeout(() => showGet([stageDef.reward]), 700);
+        if (r.isNew) newCompanion = stageDef.reward;
         const k = unitById(stageDef.reward);
         rewards.push(`<div class="reward"><canvas class="thumb" data-type="unit" data-id="${k.id}"></canvas><span class="tag">${r.isNew ? "NEW!" : "Lv" + r.lv + "に UP!"}</span>${rb(k.name)}</div>`);
       }
@@ -3121,6 +3147,7 @@
         `<button class="big-btn${hNow < 3 ? " plain" : ""}" type="button" data-result="retry">もう{一回|いっかい}</button><button class="big-btn plain" type="button" data-result="map">ステージを えらぶ</button>`);
     $("resultScreen").hidden = false;
     paintThumbs($("resultRewards"));
+    if (newCompanion) showGet([newCompanion]);
   }
 
   const BEAM_COL = { sapphire: "#7fb0ff", slate: "#9aa6b8", greenschist: "#9cc596", emerald: "#5dffa8", amethyst: "#d9a8ff", topaz: "#ffd27a", fluorite: "#c9a8ff", calcite: "#fff6d8", amber: "#ffc04d" };
@@ -4557,12 +4584,16 @@
     if (name === "title") paintThumbs($("titleScreen"));
   }
 
-  function startStage(st) {
+  function startStage(st, quickStart = false) {
     if (!SAVE.party.length) { toast("へんせいで {石|いし}を えらんでね"); return; }
     show("battle");
     newGame(st);
     fitCanvas();
-    if (!store("ishikoroHowto3", false)) $("howtoScreen").hidden = false;
+    if (quickStart) {
+      save("ishikoroHowto3", true);
+      tip("したの {石|いし}ボタンを おそう", "だした あとは、じぶんで すすんで たたかうよ。", true);
+    }
+    if (!quickStart && !store("ishikoroHowto3", false)) $("howtoScreen").hidden = false;
     else Sound.startMusic("field");
   }
 
@@ -5167,6 +5198,7 @@
       if (!d || typeof d.owned !== "object" || !Array.isArray(d.cleared) || !Array.isArray(d.party)) return false;
       Object.keys(SAVE).forEach(key => delete SAVE[key]);
       Object.assign(SAVE, freshSave(), d);
+      adaptOpeningSave(SAVE);
       persist();
       return true;
     } catch (e) { return false; }
@@ -5424,6 +5456,9 @@
       if (!SAVE.endingSeen) { SAVE.endingSeen = true; persist(); setTimeout(() => toast("🗼 ふうかの とう が ひらいた！"), 400); }
       show("map");
       return;
+    }
+    if (SAVE.cleared.length === 0) {
+      for (const id of ["sandstone", "pumice"]) if (!owns(id)) giveStone(id);
     }
     SAVE.introSeen = true; persist();
     show("map");
@@ -5747,7 +5782,14 @@
   });
 
   // ================= ボタン =================
-  $("playBtn").addEventListener("click", () => { Sound.init(); Sound.play("tap"); if (!SAVE.introSeen) startIntro(); else show("map"); });
+  $("playBtn").addEventListener("click", () => {
+    Sound.init(); Sound.play("tap");
+    if (!SAVE.introSeen && SAVE.cleared.length === 0) {
+      for (const id of ["sandstone", "pumice"]) if (!owns(id)) giveStone(id);
+      SAVE.introSeen = true; persist();
+      startStage(STAGES[0], true);
+    } else show("map");
+  });
   $("storyBtn").addEventListener("click", () => { Sound.init(); Sound.play("tap"); startIntro(); });
   $("resetBtn").addEventListener("click", () => { Sound.play("tap"); $("resetScreen").hidden = false; });
   $("resetNo").addEventListener("click", () => { Sound.play("tap"); $("resetScreen").hidden = true; });
@@ -5775,8 +5817,11 @@
     const act = b.dataset.result;
     if (act === "map") show("map");
     else if (act === "retry") startStage(stageDef);
-    else if (act === "next") openPrep(STAGES[STAGES.indexOf(stageDef) + 1]);
-    else if (act === "tnext") openPrep(towerStage(stageDef.floor + 1));
+    else if (act === "next") {
+      const next = STAGES[STAGES.indexOf(stageDef) + 1];
+      show("map"); if (next) openPrep(next);
+    }
+    else if (act === "tnext") { const next = towerStage(stageDef.floor + 1); show("map"); openPrep(next); }
     else if (act === "ending") startEnding();
     else if (act === "trialend") openTrialEnd();
     else if (act === "help") {

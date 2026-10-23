@@ -1,0 +1,77 @@
+{
+  "method": "Chromium touch 844x340, virtual clock, actual buttons. One reference run for progression; separate fixed-seed (713) policy comparisons using real pre-stage saves. Not human timing.",
+  "stages": [
+    {
+      "stage": 1,
+      "id": 1,
+      "outcome": "クリア！",
+      "active_seconds": 42.53,
+      "successful_deploys": 16,
+      "evolutions": 1,
+      "hp_left": 1500,
+      "batsugun": 0
+    },
+    {
+      "stage": 2,
+      "id": 2,
+      "outcome": "クリア！",
+      "active_seconds": 51.12,
+      "successful_deploys": 27,
+      "evolutions": 0,
+      "hp_left": 1500,
+      "batsugun": 4
+    },
+    {
+      "stage": 3,
+      "id": 16,
+      "outcome": "クリア！",
+      "active_seconds": 45.85,
+      "successful_deploys": 24,
+      "evolutions": 2,
+      "hp_left": 1500,
+      "batsugun": 7
+    }
+  ],
+  "policies": [
+    {
+      "stage": 2,
+      "policy": "light-only",
+      "outcome": "まけ…",
+      "t": 119.1360000000128,
+      "box": -7.050000000002893,
+      "castle": 1800,
+      "spawn": 32,
+      "good": 0
+    },
+    {
+      "stage": 2,
+      "policy": "counter-with-front",
+      "outcome": "クリア！",
+      "t": 45.63299999999686,
+      "box": 1500,
+      "castle": 0,
+      "spawn": 15,
+      "good": 8
+    },
+    {
+      "stage": 3,
+      "policy": "no-evolution",
+      "outcome": "まけ…",
+      "t": 68.92799999999653,
+      "box": -14.699999999999731,
+      "castle": 2200,
+      "spawn": 37,
+      "good": 0
+    },
+    {
+      "stage": 3,
+      "policy": "transform",
+      "outcome": "クリア！",
+      "t": 55.61699999999582,
+      "box": 1500,
+      "castle": -7,
+      "spawn": 28,
+      "good": 10
+    }
+  ]
+}

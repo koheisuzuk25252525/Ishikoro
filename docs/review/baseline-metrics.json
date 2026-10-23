@@ -1,0 +1,40 @@
+{
+  "revision": "c440ea0",
+  "method": "Chromium touch viewport 844x340; actual DOM controls; Playwright virtual clock; read-only study probe only in served response; one observational run; not a human playtest",
+  "operations_before_first_deploy": 13,
+  "stages": [
+    {
+      "stage": 1,
+      "id": 1,
+      "outcome": "クリア！",
+      "active_seconds": 55.63,
+      "successful_deploys": 7,
+      "press_attempts": 10,
+      "evolutions": 1,
+      "hp_left": 1500,
+      "batsugun": 0
+    },
+    {
+      "stage": 2,
+      "id": 2,
+      "outcome": "クリア！",
+      "active_seconds": 77.07,
+      "successful_deploys": 34,
+      "press_attempts": 39,
+      "evolutions": 0,
+      "hp_left": 1500,
+      "batsugun": 0
+    },
+    {
+      "stage": 3,
+      "id": 16,
+      "outcome": "クリア！",
+      "active_seconds": 65.14,
+      "successful_deploys": 20,
+      "press_attempts": 29,
+      "evolutions": 3,
+      "hp_left": 1500,
+      "batsugun": 0
+    }
+  ]
+}
