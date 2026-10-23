@@ -66,6 +66,8 @@ iPhone・iPadの両方で、タイトル表示、タッチ操作、最初のス�
 
 世界観は「地層と標本の冒険図鑑」。デザインの考え方と描画箇所は [VISUAL_DESIGN.md](VISUAL_DESIGN.md) にまとめています。石の能力値とセーブ形式を保ち、最初の3戦の敵・城HP・報酬・入口を見直しています。診断・変更前後の数値・人によるテスト項目は [docs/PLAYTEST.md](docs/PLAYTEST.md)、自動テストの範囲は [docs/REGRESSION.md](docs/REGRESSION.md) を参照してください。
 
+出撃と変身の押し分け、相性表示の修正、序盤の敵予告については [docs/TACTICAL_CHOICES.md](docs/TACTICAL_CHOICES.md) を参照してください。
+
 任意の開発用ツールとしてPythonのPlaywrightを使い、画面遷移・表示範囲・既存セーブ・初期セーブからの3戦・作戦の比較・各演出・中断復帰を確認できます。これはゲームの実行に必要な依存関係ではありません。
 
 ```sh
