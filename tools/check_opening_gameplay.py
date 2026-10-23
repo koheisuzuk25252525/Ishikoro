@@ -12,6 +12,7 @@ import base64
 import functools
 import http.server
 import json
+import re
 import shutil
 import threading
 from pathlib import Path
@@ -28,6 +29,7 @@ window.__gameCheck = () => ({
   game: G && {time:G.clock, over:G.over, paused:G.paused, cinema:G.cinema,
     hp:G.boxHP, max:G.boxMax, castle:G.castleHP, spawn:G.spawnN,
     good:G.batsugun, magma:G.magma, sed:G.sed, help:G.help,
+    units:G.units.filter(u=>!u.dead).map(u=>u.kind.id), charge:{...G.charge},
     effects:G.fx.length, review:JSON.parse(JSON.stringify(G.review))}
 });
 """
@@ -110,11 +112,10 @@ class Checks:
                       const buttons=[...document.querySelectorAll('.rock-btn')];
                       if(ids)buttons.sort((a,b)=>ids.indexOf(a.id.slice(7))-ids.indexOf(b.id.slice(7)));
                       for(const button of buttons){
-                        if(button.disabled || (ids && !ids.includes(button.id.slice(7))))continue;
-                        const changing=button.classList.contains('evolve');
-                        if(changing&&!evolve)continue;
-                        button.click();
-                        if(changing)break;
+                        if(ids && !ids.includes(button.id.slice(7)))continue;
+                        const transform=document.getElementById('evolve-'+button.id.slice(7));
+                        if(evolve && transform && !transform.disabled){transform.click();break;}
+                        if(!button.disabled)button.click();
                       }
                     }""", {"ids": ids, "evolve": evolve}
                 )
@@ -250,9 +251,9 @@ class Checks:
         page.locator("#deploy-sandstone").click()
         page.clock.run_for(15000)
         assert page.locator("#deploy-sandstone .name").inner_text() == "さがん"
-        assert page.locator("#deploy-sandstone .rock-action").inner_text() == "へんしん！"
-        assert "けいがん" in page.locator("#deploy-sandstone").get_attribute("aria-label")
-        page.locator("#deploy-sandstone").click()
+        assert page.locator("#evolve-sandstone .evo-action").inner_text() == "へんしん！"
+        assert "けいがん" in page.locator("#evolve-sandstone").get_attribute("aria-label")
+        page.locator("#evolve-sandstone").click()
         assert page.locator("#cinema").is_visible()
         page.clock.run_for(250)
         page.evaluate("dispatchEvent(new Event('ishikoro:background'))")
@@ -292,6 +293,83 @@ class Checks:
         assert not errors, errors
         page.close()
         self.passed("44px targets, explicit evolution, simulated native/browser interruption, WebAudio state, portrait book and gesture-only resume")
+
+    def tactical_choices(self, fixtures):
+        page, errors = self.new_page()
+        page.locator("#playBtn").click()
+        assert page.locator("#evolve-sandstone").is_disabled()
+        page.locator("#deploy-sandstone").click()
+        page.clock.run_for(15000)
+        assert page.locator("#evolve-sandstone").is_enabled()
+        before = self.state(page)["game"]
+        # A genuine pointer click on Deploy must leave the ready evolution saved.
+        page.locator("#deploy-sandstone").click()
+        held = self.state(page)["game"]
+        assert held["spawn"] == before["spawn"] + 1
+        assert held["review"]["evolutions"] == 0
+        assert held["charge"]["sandstone"] >= before["charge"]["sandstone"]
+        assert page.locator("#cinema").is_hidden()
+        page.locator("#evolve-sandstone").click()
+        evolved = self.state(page)["game"]
+        assert evolved["spawn"] == held["spawn"]
+        assert evolved["review"]["evolutions"] == 1
+        assert "quartzite" in evolved["units"] and "sandstone" in evolved["units"]
+        assert evolved["charge"]["sandstone"] == 0
+        assert page.locator("#cinema").is_visible()
+        assert not errors, errors
+        page.close()
+
+        page, errors = self.new_page(fixtures[3])
+        page.locator("#playBtn").click()
+        page.locator('[data-stage="16"]').click()
+        page.locator("#prepGo").click()
+        page.clock.run_for(7000)
+        assert "すなあらし" in page.locator("#nextEnemy").inner_text()
+        # Pointer auto-wait and the 100ms HUD cadence may cross a second boundary.
+        remaining = int(re.search(r"あと (\d+)びょう", page.locator("#nextEnemy").inner_text())[1])
+        assert 1 < remaining <= 8
+        page.clock.run_for(1200)
+        later = int(re.search(r"あと (\d+)びょう", page.locator("#nextEnemy").inner_text())[1])
+        assert later < remaining
+        page.locator("#pauseBtn").click()
+        forecast = page.locator("#nextEnemy").inner_text()
+        page.clock.run_for(3000)
+        assert page.locator("#nextEnemy").inner_text() == forecast
+        page.locator("#resumeBtn").click()
+        page.clock.run_for(8000)
+        # Sandstone and pumice used to glow green just because 0.4 was truthy.
+        assert "good" not in page.locator("#deploy-sandstone").get_attribute("class")
+        assert "good" not in page.locator("#deploy-pumice").get_attribute("class")
+        page.locator("#pauseBtn").click()
+        page.locator("#quitBtn").click()
+        assert page.locator("#battlePlan").is_hidden()
+        assert not errors, errors
+        page.close()
+        self.passed("deploy while saving evolution, explicit transformation, honest matchup indicators, paused forecast")
+
+        # Six-card touch layout, including long names, at phone and tablet sizes.
+        fixture = dict(fixtures[3])
+        fixture["party"] = ["sandstone", "pumice", "shale", "basalt", "obsidian", "quartz"]
+        fixture["owned"] = {id: 1 for id in fixture["party"]}
+        for width, height in ((667, 300), (844, 340), (1180, 780)):
+            page, errors = self.new_page(fixture)
+            page.set_viewport_size({"width": width, "height": height})
+            page.locator("#playBtn").click()
+            page.locator('[data-stage="16"]').click()
+            page.locator("#prepGo").click()
+            page.clock.run_for(7000)
+            for selector in (".rock-btn", ".evolve-btn"):
+                for button in page.locator(selector).all():
+                    button.scroll_into_view_if_needed()
+                    box = button.bounding_box()
+                    assert box["width"] >= 44 and box["height"] >= 44, box
+                    assert 0 <= box["y"] < box["y"] + box["height"] <= height, box
+                    assert button.evaluate("e=>{const r=e.getBoundingClientRect();return e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}"), button.get_attribute("id")
+            page.locator("#deploy-sandstone").scroll_into_view_if_needed()
+            self.screenshot(page, f"tactics-six-stones-{width}.png")
+            assert not errors, errors
+            page.close()
+        self.passed("six-stone deployment/evolution targets: phone 667×300, 844×340, tablet 1180×780")
 
     def trial_and_difficulty(self, fixture):
         trial = self.source.replace('const EDITION = "family";', 'const EDITION = "trial";', 1)
@@ -357,6 +435,7 @@ def main():
                                 (ROOT / "ishikoro.html").read_text(), args.screenshots)
                 fixtures, final_save = checks.walkthrough()
                 checks.strategies(fixtures)
+                checks.tactical_choices(fixtures)
                 checks.legacy_saves()
                 checks.lifecycle()
                 checks.trial_and_difficulty(final_save)

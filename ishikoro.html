@@ -866,6 +866,31 @@
     .pause-btn { width: 56px; height: 56px; }
     .speed-btn { height: 56px; right: 74px; }
   }
+  /* One place for each action: deploying never spends a saved transformation. */
+  .battle-plan { display: flex; justify-content: space-between; gap: 8px; padding: 4px max(12px, env(safe-area-inset-right)) 4px max(12px, env(safe-area-inset-left)); background: #234b3e; color: #fff6dc; font-size: 12px; font-weight: 700; line-height: 1.4; }
+  .battle-plan span { min-width: 0; }
+  #nextEnemy { color: #f7d58e; text-align: right; }
+  .shop { align-items: stretch; }
+  .rock-slot { flex: 0 0 112px; display: grid; grid-template-rows: 60px 44px; gap: 4px; }
+  .rock-slot .rock-btn { width: 100%; height: 60px; min-height: 0; gap: 0; padding: 2px; }
+  .rock-slot .rock-btn canvas { height: 24px; width: 34px; justify-self: start; margin-left: 4px; }
+  .rock-slot .rock-btn .price { position: absolute; top: 8px; right: 4px; }
+  .rock-slot .rock-btn.bad { border: 2px dashed #9e6447; }
+  .evolve-btn { position: relative; overflow: hidden; display: grid; align-content: center; justify-items: center; gap: 2px; min-height: 44px; padding: 2px; border: 1px solid #9b97ac; border-radius: 5px; background: #eeeaf1; color: #4e4665; }
+  .evolve-btn:disabled { color: #655f72; }
+  .evolve-btn.ready { border: 2px solid #675382; background: #e4d8ee; }
+  .evolve-btn.ready:not(:disabled) { box-shadow: inset 0 3px #8d78a7; }
+  .evolve-btn .evo-fill { position: absolute; inset: 0 auto 0 0; background: #8b70a72b; pointer-events: none; }
+  .evo-action, .evo-target { position: relative; font-size: 12px; line-height: 1.2; font-weight: 700; }
+  .evo-target { font-size: 11px; overflow-wrap: anywhere; }
+  .stone-role { display: grid; place-items: center; font-size: 12px; color: #476052; border-bottom: 2px solid #b4bea5; }
+  @media (min-height: 600px) and (min-width: 700px) {
+    .rock-slot { flex-basis: 138px; grid-template-rows: 118px 52px; }
+    .rock-slot .rock-btn { height: 118px; }
+    .rock-slot .rock-btn canvas { height: 58px; width: 76px; justify-self: center; margin: 0; }
+    .rock-slot .rock-btn .price { position: relative; top: auto; right: auto; }
+    .evo-action, .evo-target, .battle-plan { font-size: 14px; }
+  }
   @media (orientation: portrait) { body.in-battle .rotate { display: flex; } }
 </style>
 
@@ -893,6 +918,7 @@
     <span>しろ <b id="castleHealth"></b><span class="hp-track"><i id="castleHealthBar"></i></span></span>
   </div>
   <div class="battle-feedback" id="battleFeedback" role="status" aria-live="polite" hidden></div>
+  <div class="battle-plan" id="battlePlan" hidden><span id="focusEnemy"></span><span id="nextEnemy"></span></div>
   <div class="bottom">
     <div class="wallet">
       <div class="coin"><i style="background: var(--magma)"></i><span><span class="num" id="magmaN">150</span><span class="word">マグマ</span></span></div>
@@ -1018,7 +1044,7 @@
       <div class="steps">
         <div class="step"><span class="step-num">1</span><div class="mini"><span></span></div><p>ボタンを おすと<br><ruby>石<rt>いし</rt></ruby>が <ruby>出<rt>で</rt></ruby>る</p></div>
         <div class="step"><span class="step-num">2</span><div class="mini"><span class="g"></span></div><p>みどりに <ruby>光<rt>ひか</rt></ruby>る <ruby>石<rt>いし</rt></ruby>は<br>いまの <ruby>敵<rt>てき</rt></ruby>に <ruby>強<rt>つよ</rt></ruby>い</p></div>
-        <div class="step"><span class="step-num">3</span><div class="mini"><span class="p"></span></div><p>「へんしん！」と でたら<br>おなじ ボタンを おそう</p></div>
+        <div class="step"><span class="step-num">3</span><div class="mini"><span class="p"></span></div><p>だす・へんしんを<br>えらんで おそう</p></div>
         <div class="step"><span class="step-num">4</span><div class="mini"><span class="c"></span></div><p>みぎの <ruby>雲<rt>くも</rt></ruby>の <ruby>城<rt>しろ</rt></ruby>を<br>こわせば かち</p></div>
       </div>
       <button class="big-btn" id="startBtn" type="button">はじめる</button>
@@ -2647,10 +2673,14 @@
     return null;
   }
 
-  function press(id) {
+  function pressEvolution(id) {
     if (!G || G.over || G.paused || G.cinema) return;
     const evoId = evolvableFor(id);
-    if (evoId) { evolveUnit(evoId); return; }
+    if (evoId) evolveUnit(evoId);
+  }
+
+  function press(id) {
+    if (!G || G.over || G.paused || G.cinema) return;
     const k = unitById(id);
     if (mod("oneKind") && id !== SAVE.party[0]) { popFx(BOX_X + 120, GROUND - 130, "しばり中！", "#ffd84a"); return; }
     if (!canPay(k.cost) || (G.cooldowns[id] || 0) > 0) return;
@@ -2663,7 +2693,7 @@
     if (k.special === "meteor") meteorDrop(nu); else Sound.play("deploy");
     const stackN = G.fx.filter(f => f.type === "name" && f.t < 0.9).length;
     if (speed <= 5 && stackN < 3) G.fx.push({ type: "name", x: nu.x + 20 + stackN * 70, y: footY(nu) - k.size * 2.4 - stackN * 44, kanji: k.name.replace(RUBY_RE, "$1"), kana: k.kana, t: 0, life: 1.3 });
-    if (k.evolve) tipOnce("evo-" + id, `${k.name}は へんしんできる！`, "ボタンに むらさきが たまったら おそう。");
+    if (k.evolve) tipOnce("evo-" + id, `${k.name}は へんしんできる！`, "したの「へんしん」に たまるよ。つかう ときを えらぼう。");
     renderHUD();
   }
 
@@ -2845,7 +2875,7 @@
       if (G.charge[id] >= k.evolve.time && !G.readyAnnounced[id]) {
         G.readyAnnounced[id] = true;
         Sound.play("ready");
-        tip(`${k.name}が へんしんできる！`, "「へんしん！」と でた おなじ ボタンを おそう。", true);
+        tip(`${k.name}が へんしんできる！`, "つかう ときを えらぼう。", true);
       }
     }
   }
@@ -3281,14 +3311,25 @@
     G.fx.push({ type: "beam", x1: u.x + u.kind.size * 0.5, y1: footY(u) - u.kind.size * 0.9, x2, y2, color: col, plate: u.kind.beam === "plate", tier, t: 0, life: tier === 3 ? 0.35 : 0.25 });
   }
 
-  function goodNow() {
-    const good = new Set();
-    for (const e of G.enemies) {
-      if (e.dead) continue;
-      e.kind.resist.forEach(id => good.add(id));
-      Object.keys(e.kind.bonus).forEach(id => good.add(id));
-    }
-    return good;
+  // Read the same multipliers as combat; never treat a 0.4 penalty as a benefit.
+  function battleMatch(k, enemy) {
+    if (!enemy) return 0;
+    if (enemy.strong.includes(k.id)) return -1;
+    return enemy.resist.includes(k.id) || enemy.bonus[k.id] > 1 ? 1 : 0;
+  }
+  function nextThreat() {
+    // Only the scripted opening is forecast: later random waves/boss HP triggers
+    // cannot honestly be described as a fixed countdown.
+    if (!OPENING[stageDef.id]) return null;
+    const entry = G.script.slice(G.scriptIndex).find(([at, id]) =>
+      at > G.clock && at <= G.clock + 8 && id !== "rain");
+    if (!entry) return null;
+    const enemy = enemyById(mod("allRain") ? "rain" : entry[1]);
+    return { enemy, seconds: Math.max(1, Math.ceil(entry[0] - G.clock)) };
+  }
+  function tacticalFocus() {
+    const front = G.enemies.filter(e => !e.dead).reduce((a,b) => !a || b.x < a.x ? b : a, null);
+    return front && front.kind;
   }
 
   // ================= 描画 =================
@@ -4603,12 +4644,34 @@
       b.setAttribute("aria-label", `${k.kana}を だす`);
       const res = k.cost.magma ? "magma" : "sed";
       const color = res === "magma" ? "var(--magma)" : "var(--sed)";
-      b.innerHTML = `<span class="fill cool"></span><span class="fill charge"></span><span class="ricon">${ORIGINS[originOf(k)].icon}</span>` +
-        `<canvas class="thumb" data-type="unit" data-id="${k.id}" width="36" height="28"></canvas><span class="name">${k.kana}</span><span class="rock-trait">${battleRole(k)}</span>` +
+      b.innerHTML = `<span class="fill cool"></span><span class="ricon">${ORIGINS[originOf(k)].icon}</span>` +
+        `<canvas class="thumb" data-type="unit" data-id="${k.id}" width="36" height="28"></canvas><span class="name">${k.kana}</span>` +
         `<span class="rock-action">だす</span><span class="price" style="background:${color}">${res === "magma" ? "マグマ" : "すな"} ${k.cost[res]}</span>`;
       b.addEventListener("click", () => press(k.id));
-      shop.appendChild(b);
-      shopButtons[k.id] = { b, cool: b.querySelector(".cool"), charge: b.querySelector(".charge"), name: b.querySelector(".name"), action: b.querySelector(".rock-action"), price: b.querySelector(".price") };
+      const slot = document.createElement("div");
+      slot.className = "rock-slot";
+      slot.appendChild(b);
+      let evolution = null;
+      if (k.evolve) {
+        evolution = document.createElement("button");
+        evolution.type = "button";
+        evolution.className = "evolve-btn";
+        evolution.id = "evolve-" + id;
+        evolution.innerHTML = '<span class="evo-fill"></span><span class="evo-action"></span><span class="evo-target"></span>';
+        evolution.addEventListener("click", () => pressEvolution(id));
+        slot.appendChild(evolution);
+      } else {
+        const role = document.createElement("span");
+        role.className = "stone-role";
+        role.textContent = battleRole(k);
+        slot.appendChild(role);
+      }
+      shop.appendChild(slot);
+      shopButtons[k.id] = { b, cool: b.querySelector(".cool"), name: b.querySelector(".name"),
+        action: b.querySelector(".rock-action"), price: b.querySelector(".price"), evolution,
+        evoAction: evolution && evolution.querySelector(".evo-action"),
+        evoTarget: evolution && evolution.querySelector(".evo-target"),
+        charge: evolution && evolution.querySelector(".evo-fill") };
     }
     paintThumbs(shop);
   }
@@ -4629,33 +4692,49 @@
       $("tagBtn").hidden = !tg;
       if (tg) {
         $("tagBtn").innerHTML = `タッグわざ！<b>${rb(tg.name)}</b>`;
-        tipOnce("tag-" + tg.id, "タッグわざが つかえる！", "{左上|ひだりうえ}の ボタンを おそう。");
+        tipOnce("tag-" + tg.id, "タッグわざが つかえる！", "{下|した}の ボタンを おそう。");
       }
     }
     $("magmaN").textContent = Math.floor(G.magma);
     $("sedN").textContent = Math.floor(G.sed);
-    const good = goodNow();
+    const focus = tacticalFocus(), forecast = nextThreat();
+    $("battlePlan").hidden = currentScreen !== "battle" || G.over;
+    $("focusEnemy").textContent = focus ? `まえの てき：${focus.kana}` : "なかまを だして しろへ！";
+    $("nextEnemy").textContent = forecast ? `よこく：${forecast.enemy.kana} あと ${forecast.seconds}びょう` : "";
     for (const id of SAVE.party) {
       const s = shopButtons[id];
       if (!s) continue;
       const k = unitById(id);
       const cd = G.cooldowns[id] || 0;
       const evoId = evolvableFor(id);
-      const ready = !G.paused && !G.over && !G.cinema && (!!evoId || (canPay(k.cost) && cd <= 0));
+      const active = !G.paused && !G.over && !G.cinema;
+      const atCap = G.units.filter(u => !u.dead).length >= UNIT_CAP;
+      const restricted = mod("oneKind") && id !== SAVE.party[0];
+      const ready = active && canPay(k.cost) && cd <= 0 && !atCap && !restricted;
+      const matchup = battleMatch(k, focus);
       s.b.disabled = !ready;
       s.b.classList.toggle("ready", ready);
-      s.b.classList.toggle("good", good.has(id) && !evoId);
-      s.b.classList.toggle("evolve", !!evoId);
+      s.b.classList.toggle("good", matchup > 0);
+      s.b.classList.toggle("bad", matchup < 0);
       s.cool.style.height = (k.cd > 0 ? Math.min(1, cd / k.cd) * 100 : 0) + "%";
-      let chargeFrac = 0;
-      chainOf(id).forEach(c => { const ck = unitById(c); if (ck.evolve) chargeFrac = Math.max(chargeFrac, (G.charge[c] || 0) / ck.evolve.time); });
-      s.charge.style.height = Math.min(1, chargeFrac) * 100 + "%";
-      s.name.textContent = k.kana;
       const missing = Math.max(0, ...Object.entries(k.cost).map(([res,n]) => Math.ceil(n-G[res])));
-      s.action.textContent = evoId ? "へんしん！" : G.paused || G.cinema ? "まってね" : cd > 0 ? `${Math.ceil(cd)}びょう` : missing ? `あと ${missing}` : good.has(id) ? "◎ だす" : "だす";
-      s.price.hidden = !!evoId;
-      const label = evoId ? `${k.kana}：${unitById(unitById(evoId).evolve.to).kana}に へんしん` : `${k.kana}を だす。${s.price.textContent}。${s.action.textContent}`;
-      if (s.b.getAttribute("aria-label") !== label) s.b.setAttribute("aria-label", label);
+      s.action.textContent = G.over ? "おしまい" : !active ? "まってね" : restricted ? "しばり中" : atCap ? "いっぱい" : cd > 0 ? `${Math.ceil(cd)}びょう` : missing ? `あと ${missing}` : matchup > 0 ? "◎とくい・だす" : matchup < 0 ? "△にがて・だす" : "だす";
+      const relation = focus ? `${focus.kana}に ${matchup > 0 ? "とくい" : matchup < 0 ? "にがて" : "ふつう"}。` : "";
+      s.b.setAttribute("aria-label", `${k.kana}を だす。${relation}${s.price.textContent}。${s.action.textContent}`);
+      if (s.evolution) {
+        const charging = evoId || chainOf(id).slice().reverse().find(c => unitById(c).evolve && onField(c).length) || id;
+        const from = unitById(charging), to = unitById(from.evolve.to);
+        const seconds = Math.max(0, Math.ceil(from.evolve.time - (G.charge[charging] || 0)));
+        const on = onField(charging).length > 0;
+        const targetMatch = battleMatch(to, focus);
+        s.evolution.disabled = !active || !evoId;
+        s.evolution.classList.toggle("ready", !!evoId);
+        s.evolution.classList.toggle("good", targetMatch > 0);
+        s.charge.style.width = Math.min(1, (G.charge[charging] || 0) / from.evolve.time) * 100 + "%";
+        s.evoAction.textContent = evoId ? "へんしん！" : on ? `あと ${seconds}びょう` : "だすと たまる";
+        s.evoTarget.textContent = `${targetMatch > 0 ? "◎ " : targetMatch < 0 ? "△ " : ""}→ ${to.kana}`;
+        s.evolution.setAttribute("aria-label", `${from.kana}を ${to.kana}に へんしん。${s.evoAction.textContent}${focus ? `。${focus.kana}に ${targetMatch > 0 ? "とくい" : targetMatch < 0 ? "にがて" : "ふつう"}` : ""}`);
+      }
     }
   }
 
@@ -4717,6 +4796,7 @@
     if (name !== "battle" && REC) recStop();
     if (name !== "battle") {
       $("battleFeedback").hidden = true;
+      $("battlePlan").hidden = true;
       $("battleStatus").hidden = true;
       document.querySelector(".app").classList.remove("has-feedback");
       ["resultScreen", "pauseScreen", "howtoScreen", "cinema"].forEach(id => { $(id).hidden = true; });
@@ -4915,7 +4995,7 @@
     let sc = 0;
     for (const e of foes) {
       const w = e.boss ? 2 : 1;
-      if (e.resist.includes(k.id) || e.bonus[k.id]) sc += 2 * w;
+      if (e.resist.includes(k.id) || e.bonus[k.id] > 1) sc += 2 * w;
       if (e.strong.includes(k.id)) sc -= 3 * w;
       if (e.boss && (e.special === "knockback" || e.special === "storm") && k.heavy) sc += 1;
     }
@@ -6082,7 +6162,7 @@
   function tagsHTML() {
     const g = gotSet();
     const side = ids => ids.map(id => `<canvas class="thumb sm" data-type="unit" data-id="${id}" data-lock="${g.has(id) ? 0 : 1}"></canvas>`).join("<span class='or'>か</span>");
-    return `<p class="lead">${rb("きめられた 2つの {石|いし}が いっしょに たたかうと、{左上|ひだりうえ}に タッグわざの ボタンが {出|で}る。どれも ほんとうの {石|いし}の かんけいが もとに なって いるよ。")}</p><div class="tags">` +
+    return `<p class="lead">${rb("きめられた 2つの {石|いし}が いっしょに たたかうと、{下|した}に タッグわざの ボタンが {出|で}る。どれも ほんとうの {石|いし}の かんけいが もとに なって いるよ。")}</p><div class="tags">` +
       TAGS.map(t => {
         const known = t.a.some(id => g.has(id)) && t.b.some(id => g.has(id));
         const used = SAVE.tagsSeen.includes(t.id);
@@ -6148,7 +6228,7 @@
       <p><b>${h}</b>　${rb(note)}</p></div>`;
   }
   function unitDetailHTML(k) {
-    const goodVs = ENEMIES.filter(e => e.resist.includes(k.id) || e.bonus[k.id]);
+    const goodVs = ENEMIES.filter(e => e.resist.includes(k.id) || e.bonus[k.id] > 1);
     const badVs = ENEMIES.filter(e => e.strong.includes(k.id));
     const cost = !k.rarity ? "たたかいの {中|なか}で へんしんして なる" : k.cost.magma ? `マグマ ${k.cost.magma}` : `たいせきぶつ ${k.cost.sed}`;
     const from = evolvedFrom(k.id);
@@ -6176,7 +6256,7 @@
     </div>`);
   }
   function enemyDetailHTML(k) {
-    const ids = k.resist.concat(Object.keys(k.bonus));
+    const ids = k.resist.concat(Object.keys(k.bonus).filter(id => k.bonus[id] > 1));
     const good = COLLECTION.filter(u => ids.includes(u.id));
     const bad = COLLECTION.filter(u => k.strong.includes(u.id));
     return rb(`<div class="dwrap">

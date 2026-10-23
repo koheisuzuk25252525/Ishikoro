@@ -1,0 +1,82 @@
+{
+  "method": "PC Chromium, virtual game clock; not a human playtest",
+  "completed": [
+    "fresh save: two-touch first deployment, stages 1→2→3, reward/Next order, reload and resume",
+    "fixed initial seed 713: stage 2 light-only → loss, help remains usable",
+    "fixed initial seed 713: stage 2 sharp-with-front → win",
+    "fixed initial seed 713: stage 3 no-evolution → loss, help remains usable",
+    "fixed initial seed 713: stage 3 evolution → win",
+    "deploy while saving evolution, explicit transformation, honest matchup indicators, paused forecast",
+    "six-stone deployment/evolution targets: phone 667×300, 844×340, tablet 1180×780",
+    "legacy local save and ISHI1 import: defaults, progress, levels, full party, unknown fields, invalid-code preservation",
+    "44px targets, explicit evolution, simulated native/browser interruption, WebAudio state, portrait book and gesture-only resume",
+    "trial boundary still locks the next chapter",
+    "leaving digging before delayed introduction cannot cover another screen"
+  ],
+  "runs": [
+    {
+      "case": "opening",
+      "stage": 1,
+      "time": 36.084999999997855,
+      "hp": 1500,
+      "spawn": 19,
+      "good": 0
+    },
+    {
+      "case": "opening",
+      "stage": 2,
+      "time": 51.782999999996235,
+      "hp": 1500,
+      "spawn": 29,
+      "good": 2
+    },
+    {
+      "case": "opening",
+      "stage": 3,
+      "time": 48.12799999999664,
+      "hp": 1500,
+      "spawn": 26,
+      "good": 7
+    },
+    {
+      "case": "light-only",
+      "stage": 2,
+      "won": false,
+      "time": 112.39600000001052,
+      "hp": -22.35000000000283,
+      "spawn": 31,
+      "good": 0,
+      "result_text": "ちいるいに なかまが 14こ たおれたよ。 つぎは「こくようせき」を だして みよう。"
+    },
+    {
+      "case": "sharp-with-front",
+      "stage": 2,
+      "won": true,
+      "time": 47.5679999999967,
+      "hp": 1500,
+      "spawn": 15,
+      "good": 10,
+      "result_text": "こくようせきの「するどい」が ちいるいに 6かい きいたよ。"
+    },
+    {
+      "case": "no-evolution",
+      "stage": 3,
+      "won": false,
+      "time": 72.51199999999771,
+      "hp": -9.089999999999316,
+      "spawn": 47,
+      "good": 0,
+      "result_text": "すなあらしに なかまが 42こ たおれたよ。「さがん」を「けいがん」へ へんしんして みよう。"
+    },
+    {
+      "case": "evolution",
+      "stage": 3,
+      "won": true,
+      "time": 55.26599999999588,
+      "hp": 1500,
+      "spawn": 30,
+      "good": 10,
+      "result_text": "けいがんの「かたい」が すなあらしに 10かい きいたよ。"
+    }
+  ]
+}
