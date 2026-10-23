@@ -3,6 +3,8 @@ import WebKit
 import UIKit
 
 struct GameView: UIViewRepresentable {
+    @Environment(\.scenePhase) private var scenePhase
+
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -10,6 +12,7 @@ struct GameView: UIViewRepresentable {
         configuration.websiteDataStore = .default()
         configuration.allowsInlineMediaPlayback = true
         let webView = WKWebView(frame: .zero, configuration: configuration)
+        context.coordinator.isAppActive = scenePhase == .active
         webView.navigationDelegate = context.coordinator
         webView.scrollView.bounces = false
         webView.isOpaque = false
@@ -28,9 +31,26 @@ struct GameView: UIViewRepresentable {
         return webView
     }
 
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        let isActive = scenePhase == .active
+        if context.coordinator.isAppActive != isActive {
+            context.coordinator.isAppActive = isActive
+            context.coordinator.sendAppState(to: uiView)
+        }
+    }
 
     final class Coordinator: NSObject, WKNavigationDelegate {
+        var isAppActive = true
+
+        func sendAppState(to webView: WKWebView) {
+            let event = isAppActive ? "ishikoro:active" : "ishikoro:background"
+            webView.evaluateJavaScript("window.dispatchEvent(new Event('\(event)'))", completionHandler: nil)
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            sendAppState(to: webView)
+        }
+
         func webView(
             _ webView: WKWebView,
             decidePolicyFor navigationAction: WKNavigationAction,
