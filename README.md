@@ -77,3 +77,7 @@ python3 tools/check_game_ui.py --play --animations --screenshots /tmp/ishikoro-r
 ```
 
 テスト用のローカルサーバーと使い捨てのブラウザを自動で立ち上げます。実際のプレイヤーのセーブにはアクセスしません。iOSのWKWebViewでの確認は、Xcodeから別途行ってください。
+
+## 冒険形式の試作
+
+[prototypes/adventure.html](prototypes/adventure.html) は、石を選んで道をひらく3場面の独立した試作です。ブラウザで開くか、Xcodeの **IshikoroAdventure** を選んで実行できます。従来版は **Ishikoro** のままです。試作はセーブを読み書きしません。目的と検証・人による比較項目は [docs/ADVENTURE_PROTOTYPE.md](docs/ADVENTURE_PROTOTYPE.md) に記載しています。

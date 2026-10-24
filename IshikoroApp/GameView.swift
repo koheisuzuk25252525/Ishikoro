@@ -17,7 +17,13 @@ struct GameView: UIViewRepresentable {
         webView.scrollView.bounces = false
         webView.isOpaque = false
         webView.backgroundColor = UIColor(red: 0.62, green: 0.80, blue: 0.95, alpha: 1)
-        if let url = Bundle.main.url(forResource: "ishikoro", withExtension: "html"),
+        #if DEBUG
+        let resource = ProcessInfo.processInfo.arguments.contains("--adventure-prototype")
+            ? "adventure" : "ishikoro"
+        #else
+        let resource = "ishikoro"
+        #endif
+        if let url = Bundle.main.url(forResource: resource, withExtension: "html"),
            let data = try? Data(contentsOf: url) {
             // Declare the byte encoding to WebKit itself as well as in HTML.
             // Keep the bundled file URL as the base for the existing save origin.
