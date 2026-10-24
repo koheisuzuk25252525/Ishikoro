@@ -28,6 +28,10 @@ Xcodeでは同じ `Ishikoro.xcodeproj` を開き、起動項目を **IshikoroAdv
 
 試作は保存APIを使わず、終了・再読み込みで最初に戻る。`ishikoro.html`・`ishikoroSave2`・`ISHI1.`・版の置換行・元の石と敵の数値を変更しない。XcodeのDebug用起動先と同梱リソースだけを追加する。
 
+## 起動設定の修正
+
+Swiftの `#if DEBUG` は、構成の名前がDebugであるだけでは有効にならない。このプロジェクトで定義が欠けていたため、試作用Schemeでも従来版を開く状態だった。Debug構成に `SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG"` を追加し、起動引数・Scheme・Debug定義のつながりを検証対象にした。Release構成は変更していない。
+
 ## 検証
 
 ```sh

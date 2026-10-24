@@ -2,6 +2,8 @@
 """Play both routes of the standalone adventure in disposable browser contexts."""
 from pathlib import Path
 import argparse
+import re
+import xml.etree.ElementTree as ET
 import shutil
 import http.server
 import functools
@@ -9,7 +11,27 @@ import threading
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
+def check_launch_wiring():
+    """Check the cross-file launch contract; no Apple SDK is required."""
+    project=(ROOT/'Ishikoro.xcodeproj/project.pbxproj').read_text()
+    configs=re.findall(r'isa = XCBuildConfiguration; buildSettings = \{(.*?)\}; name = (Debug|Release);',project,re.S)
+    debug=[settings for settings,name in configs if name=='Debug']
+    assert debug, 'No Debug build configuration'
+    assert any(re.search(r'SWIFT_ACTIVE_COMPILATION_CONDITIONS\s*=\s*"[^";]*\bDEBUG\b',settings) for settings in debug), 'Swift #if DEBUG is never enabled: adventure launch would load the original game'
+    assert not any(re.search(r'SWIFT_ACTIVE_COMPILATION_CONDITIONS\s*=\s*"[^";]*\bDEBUG\b',settings) for settings,name in configs if name=='Release'), 'Prototype must remain disabled in Release'
+    schemes=ROOT/'Ishikoro.xcodeproj/xcshareddata/xcschemes'
+    adventure=ET.parse(schemes/'IshikoroAdventure.xcscheme').getroot().find('LaunchAction')
+    assert adventure.attrib['buildConfiguration']=='Debug'
+    args=adventure.findall('./CommandLineArguments/CommandLineArgument')
+    assert any(a.attrib.get('argument')=='--adventure-prototype' and a.attrib.get('isEnabled')=='YES' for a in args)
+    normal=ET.parse(schemes/'Ishikoro.xcscheme').getroot().find('LaunchAction')
+    assert not normal.findall('./CommandLineArguments/CommandLineArgument')
+    assert 'path = prototypes/adventure.html;' in project
+    assert (ROOT/'prototypes/adventure.html').is_file()
+    print('PASS Debug condition, adventure launch argument, original scheme, Release isolation, prototype resource',flush=True)
+
 def main():
+    check_launch_wiring()
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--screenshots',type=Path,default=Path('/tmp/ishikoro-adventure'))
     args=parser.parse_args();args.screenshots.mkdir(parents=True,exist_ok=True)
